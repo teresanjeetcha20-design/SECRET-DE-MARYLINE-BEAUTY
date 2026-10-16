@@ -156,6 +156,12 @@ service cloud.firestore {
     match /checkout_keys/{id}  { allow read, write: if false; }
     match /unsubscribed/{id}   { allow read, write: if false; }
 
+    // ---------- Messages de la page Contact : enregistrés par le serveur, gérés par l'admin
+    match /contact_messages/{id} {
+      allow read, update, delete: if isAdmin();
+      allow create: if false;
+    }
+
     // Tout le reste est fermé
     match /{document=**} { allow read, write: if false; }
   }

@@ -1301,6 +1301,13 @@ html.smb-intro-on, html.smb-intro-on body { overflow: hidden; }
 @media (max-width: 560px) { .smb-cookie:not([hidden]) ~ .smb-whatsapp { display: none; } .smb-cookie-actions .btn { flex: 1; } }
 @media (prefers-reduced-motion: reduce) { .smb-pay-spin { animation: none; } }
 
+/* Moyens de paiement indisponibles : visibles mais grisés, avec la raison */
+.smb-co-pay-opt.is-disabled { opacity: .55; cursor: not-allowed; background: rgba(0,0,0,.02); }
+.smb-co-pay-why { display: inline-block; margin-top: 4px; font-style: normal; font-size: .72rem; font-weight: 700; color: #8a5a00; background: rgba(244,119,33,.1); border-radius: 999px; padding: 2px 8px; align-self: flex-start; }
+.smb-co-pay-why[hidden] { display: none !important; }
+/* Grille tarifaire pro */
+.smb-pro-more { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 16px; font-size: .85rem; color: var(--ink-soft, #6b5a62); }
+
 </style>
 <style>
   .bg-white { background: var(--white); }
@@ -1321,6 +1328,10 @@ html.smb-intro-on, html.smb-intro-on body { overflow: hidden; }
 </style>
 <style>
 /* ===== Administration (styles limités à #smb-admin-root) ===== */
+#smb-admin-root .adm-modal{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.6);display:grid;place-items:center;padding:16px}
+#smb-admin-root .adm-modal[hidden]{display:none!important}
+#smb-admin-root .adm-modal-box{width:min(620px,100%);max-height:calc(100vh - 32px);overflow:auto;background:var(--bg2);border:1px solid var(--line);border-radius:18px;padding:22px}
+#smb-admin-root .adm-modal-box textarea{min-height:180px}
 #smb-admin-root .adm-funnel{display:grid;grid-template-columns:190px 1fr 110px;gap:12px;align-items:center;margin-bottom:8px;font-size:.82rem}
 #smb-admin-root .adm-bar{height:12px;background:rgba(255,255,255,.06);border-radius:6px;overflow:hidden}
 #smb-admin-root .adm-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--gold-light))}
@@ -1709,6 +1720,7 @@ html.smb-admin-mode #chrome-overlays,html.smb-admin-mode #chrome-preloader,html.
       <div class="adm-nav-group">Clientes</div>
       <button type="button" class="adm-tab" data-tab="clients"><span>👥</span>Clientes</button>
       <button type="button" class="adm-tab" data-tab="chat"><span>💬</span>Messages <b class="adm-dot" id="chat-unread" hidden></b></button>
+      <button type="button" class="adm-tab" data-tab="contacts"><span>✉️</span>Messages clientes <b class="adm-dot" id="contacts-unread" hidden></b></button>
       <button type="button" class="adm-tab" data-tab="avis"><span>⭐</span>Avis</button>
       <button type="button" class="adm-tab" data-tab="newsletter"><span>💌</span>Newsletter</button>
       <div class="adm-nav-group">Communication</div>
@@ -1813,7 +1825,7 @@ html.smb-admin-mode #chrome-overlays,html.smb-admin-mode #chrome-preloader,html.
                 </div></div>
               <div class="adm-field"><label for="a-pf-name">Nom du produit *</label><input id="a-pf-name" type="text" maxlength="120" placeholder="Ex : Acide azélaïque"></div>
               <div class="adm-row2">
-                <div class="adm-field"><label for="pf-category">Catégorie</label>
+                <div class="adm-field"><div class="adm-between" style="margin:0"><label for="pf-category">Catégorie</label><button type="button" class="adm-link" style="margin:0" data-act="cat-add">+ Nouvelle catégorie</button></div>
                   <select id="pf-category">
                     <option value="">— Choisir —</option>
                     <option>Actif Éclaircissant</option><option>Actif Anti-Taches</option><option>Actif Hydratant</option>
@@ -1833,11 +1845,15 @@ html.smb-admin-mode #chrome-overlays,html.smb-admin-mode #chrome-preloader,html.
                   <label><input type="checkbox" value="exfoliant"> Exfoliant</label>
                   <label><input type="checkbox" value="apaisant"> Apaisant</label>
                   <label><input type="checkbox" value="kit"> Kit</label>
-                </div></div>
+                </div>
+                <button type="button" class="adm-link" style="margin:6px 0 0" data-act="tag-add-inline">+ Nouvelle étiquette</button></div>
               <div class="adm-field"><label for="pf-desc">Description courte *</label><textarea id="pf-desc" rows="3" maxlength="1500" placeholder="Décrivez l'actif et ses bienfaits…"></textarea></div>
               <div class="adm-field"><label for="pf-tagline">Accroche <small>(facultatif)</small></label><input id="pf-tagline" type="text" maxlength="120" placeholder="Ex : Pureté 99 %"></div>
 
-              <div class="adm-field" id="pf-simple-wrap"><label for="pf-price">Prix (€) *</label><input id="pf-price" type="number" min="0" step="0.01" placeholder="Ex : 25"></div>
+              <div id="pf-simple-wrap"><div class="adm-row2">
+                <div class="adm-field"><label for="pf-price">Prix (€) *</label><input id="pf-price" type="number" min="0" step="0.01" placeholder="Ex : 25"></div>
+                <div class="adm-field"><label for="pf-size">Grammage / contenance <small>(personnalisé)</small></label><input id="pf-size" type="text" maxlength="30" placeholder="Ex : 30 ml, 50 g, 1 flacon"></div>
+              </div></div>
 
               <div class="adm-field" id="pf-variable-wrap" hidden>
                 <div class="adm-between"><span class="adm-label">Formats &amp; prix</span>
@@ -1955,6 +1971,16 @@ html.smb-admin-mode #chrome-overlays,html.smb-admin-mode #chrome-preloader,html.
       </section>
 
       <!-- ===== AVIS ===== -->
+      <section class="adm-sec" id="sec-contacts" hidden>
+        <div class="adm-between"><p class="adm-muted">Messages envoyés depuis la page Contact du site. Une copie arrive aussi par e-mail quand Brevo est configuré.</p>
+          <button type="button" class="adm-btn adm-btn-ghost adm-btn-sm" data-act="contacts-reload">🔄 Actualiser</button></div>
+        <div class="adm-filters">
+          <button type="button" class="adm-tool on" data-act="contacts-filter" data-filter="todo">📥 À traiter</button>
+          <button type="button" class="adm-tool" data-act="contacts-filter" data-filter="all">Tous</button>
+        </div>
+        <div id="contacts-list"><p class="adm-muted">Chargement…</p></div>
+      </section>
+
       <section class="adm-sec" id="sec-avis" hidden>
         <div class="adm-between"><p class="adm-muted">Gérez les avis laissés par vos clientes sur le site.</p>
           <button type="button" class="adm-btn adm-btn-ghost adm-btn-sm" data-act="reviews-reload">🔄 Actualiser</button></div>
@@ -2570,6 +2596,7 @@ html.smb-admin-mode #chrome-overlays,html.smb-admin-mode #chrome-preloader,html.
             </select>
           </div>
           <div class="auth-field"><label for="c-message">Message</label><textarea id="c-message" placeholder="Décrivez votre type de peau, vos objectifs et vos questions…" required></textarea></div>
+          <div class="nl-hp" aria-hidden="true"><label for="c-website">Ne pas remplir</label><input id="c-website" name="website" type="text" tabindex="-1" autocomplete="off"></div>
           <button type="submit" class="btn btn-primary btn-block">Envoyer le message</button>
         </form>
       </div>
@@ -5734,6 +5761,7 @@ function initCheckout() {
   const $ = (id) => document.getElementById(id);
   const steps = modal.querySelectorAll("[data-co-step]");
   const CO = { type: "particulier", fee: null, feeKnown: false, sending: false, cfg: null };
+  modal.querySelectorAll(".smb-co-pay-opt").forEach((l) => { l.hidden = false; });
   const bank = () => (window.SMB_SITE && SMB_SITE.bank) || {};
   const bankOk = () => { const b = bank(); return !!(b.iban && b.iban.replace(/\s/g, "").length >= 14); };
   const hasQuote = () => SMB.cart.some((i) => i.price === null);
@@ -5757,37 +5785,53 @@ function initCheckout() {
 
   /* ---------------- Moyens de paiement ---------------- */
   const online = () => !!(CO.cfg && CO.cfg.enabled);
-  function available() {
+  function availability() {
     const cfg = CO.cfg || {};
-    const priced = !hasQuote() && CO.feeKnown && CO.fee !== null;   // montant connu : paiement possible
+    const loading = CO.cfg === null || !CO.feeKnown;
+    const common = hasQuote() ? "Indisponible pour les articles sur devis" : CO.feeKnown && CO.fee === null ? "Frais de livraison à confirmer" : "";
+    const why = (on) => (loading ? "Vérification…" : !on ? "Bientôt disponible" : common);
     return {
-      stripe: online() && cfg.stripe && priced,
-      paypal: online() && cfg.paypal && priced,
-      pawapay: online() && cfg.pawapay && priced,
-      virement: bankOk() && priced && (online() ? cfg.transfer : true),
+      stripe: why(online() && cfg.stripe),
+      paypal: why(online() && cfg.paypal),
+      pawapay: why(online() && cfg.pawapay),
+      virement: why(bankOk() && (online() ? cfg.transfer : true)),
     };
   }
   function renderPay() {
-    const av = available();
-    ["stripe", "paypal", "pawapay", "virement"].forEach((k) => { modal.querySelector(`[data-pay="${k}"]`).hidden = !av[k]; });
+    const av = availability();
+    ["stripe", "paypal", "pawapay", "virement"].forEach((k) => {
+      const lab = modal.querySelector(`[data-pay="${k}"]`);
+      const reason = av[k];
+      lab.hidden = false;
+      lab.classList.toggle("is-disabled", !!reason);
+      const input = lab.querySelector("input");
+      input.disabled = !!reason;
+      if (reason) input.checked = false;
+      let tag = lab.querySelector(".smb-co-pay-why");
+      if (!tag) { tag = document.createElement("em"); tag.className = "smb-co-pay-why"; lab.querySelector(".smb-co-pay-txt").appendChild(tag); }
+      tag.textContent = reason;
+      tag.hidden = !reason;
+    });
+    const anyOk = Object.values(av).some((r) => !r);
     const note = $("coPayNote");
     let txt = "";
-    if (hasQuote()) txt = "Votre panier contient un article sur devis : nous vous contactons pour confirmer le prix et le règlement.";
-    else if (CO.feeKnown && CO.fee === null) txt = "Les frais de livraison vers votre ville sont à confirmer : nous vous contactons pour finaliser la commande et le règlement.";
-    else if (!Object.values(av).some(Boolean)) txt = "Aucun paiement n'est demandé maintenant : nous vous contactons rapidement pour confirmer la livraison et le règlement.";
+    if (!anyOk && CO.feeKnown && CO.cfg) {
+      txt = hasQuote() ? "Votre panier contient un article sur devis : validez la commande, nous vous contactons pour le prix et le règlement."
+        : CO.fee === null ? "Les frais de livraison vers votre ville sont à confirmer : validez la commande, nous vous contactons pour finaliser."
+        : "Validez votre commande : nous vous contactons rapidement pour le règlement.";
+    }
     note.textContent = txt;
     note.hidden = !txt;
-    const checked = modal.querySelector('input[name="co-pay"]:checked');
-    if (!checked || checked.closest("label").hidden) {
-      modal.querySelectorAll('input[name="co-pay"]').forEach((r) => { r.checked = false; });
-      const first = modal.querySelector('.smb-co-pay-opt:not([hidden]) input');
+    const checked = modal.querySelector('input[name="co-pay"]:checked:not(:disabled)');
+    if (!checked) {
+      const first = modal.querySelector('.smb-co-pay-opt input:not(:disabled)');
       if (first) first.checked = true;
     }
     renderMM();
     updateSubmit();
   }
   function payChoice() {
-    const c = modal.querySelector('.smb-co-pay-opt:not([hidden]) input[name="co-pay"]:checked');
+    const c = modal.querySelector('.smb-co-pay-opt input[name="co-pay"]:checked:not(:disabled)');
     return c ? c.value : "none";
   }
   function updateSubmit() {
@@ -5861,6 +5905,7 @@ function initCheckout() {
     showStep(1);
     openCheckout();
     track("event", "commande", "ouverture", 4);
+    renderPay();
     const p = window.SMBPay ? SMBPay.config() : Promise.resolve({ enabled: false });
     p.then((cfg) => { CO.cfg = cfg || { enabled: false }; renderPay(); });
   }
@@ -6368,31 +6413,47 @@ function initReviews() {
 function initContactForm() {
   const form = document.getElementById("contactForm");
   if (!form) return;
-  form.addEventListener("submit", (e) => {
+  form.addEventListener("submit", async (e) => {
     e.preventDefault();
     const to = (window.SMB_SITE && SMB_SITE.contactEmail) || "";
-    const name = document.getElementById("c-name").value.trim();
-    const email = document.getElementById("c-email").value.trim();
-    const subject = document.getElementById("c-subject").value;
-    const message = document.getElementById("c-message").value.trim();
-    if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) || message.length < 10) {
-      showToast("Merci de renseigner votre nom, un e-mail valide et votre message.");
+    const data = {
+      name: document.getElementById("c-name").value.trim(),
+      email: document.getElementById("c-email").value.trim(),
+      subject: document.getElementById("c-subject").value,
+      message: document.getElementById("c-message").value.trim(),
+      website: (form.querySelector('input[name="website"]') || {}).value || "",
+    };
+    if (data.name.length < 2 || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(data.email) || data.message.length < 10) {
+      showToast("Merci de renseigner votre nom, un e-mail valide et votre message (10 caractères minimum).");
       return;
     }
-    if (!to) { showToast("Formulaire non configuré : écrivez-nous directement par e-mail."); return; }
     const btn = form.querySelector("[type='submit']");
-    if (btn) btn.disabled = true;
-    fetch("https://formsubmit.co/ajax/" + encodeURIComponent(to), {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({ _subject: "[SMB] " + subject, _replyto: email, _template: "table", Nom: name, Email: email, Sujet: subject, Message: message }),
-    })
-      .then((r) => { if (!r.ok) throw new Error(); form.reset(); showToast("Message envoyé, merci ! Nous vous répondons rapidement."); })
-      .catch(() => {
-        const body = `Nom : ${name}\nEmail : ${email}\n\n${message}`;
-        window.location.href = `mailto:${to}?subject=${encodeURIComponent("[SMB] " + subject)}&body=${encodeURIComponent(body)}`;
-      })
-      .then(() => { if (btn) btn.disabled = false; });
+    const label = btn ? btn.textContent : "";
+    if (btn) { btn.disabled = true; btn.textContent = "Envoi…"; }
+    const done = (msg) => { showToast(msg); if (btn) { btn.disabled = false; btn.textContent = label; } };
+    // 1. Par le site (message enregistré dans l'admin + e-mail à la boutique)
+    try {
+      const r = await fetch("/api/contact", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+      if (r.status !== 404 && r.status !== 405) {
+        const j = await r.json().catch(() => ({}));
+        if (j.ok) { form.reset(); return done("Message envoyé, merci ! Nous vous répondons rapidement."); }
+        if (r.status === 400) return done(j.message || "Vérifiez les champs du formulaire.");
+      }
+    } catch (er) { /* site sans fonctions : secours ci-dessous */ }
+    // 2. Secours : FormSubmit, puis messagerie de l'appareil
+    if (!to) return done("Envoi impossible pour le moment : écrivez-nous sur WhatsApp ou par e-mail.");
+    try {
+      const r = await fetch("https://formsubmit.co/ajax/" + encodeURIComponent(to), {
+        method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ _subject: "[SMB] " + data.subject, _replyto: data.email, _template: "table", Nom: data.name, Email: data.email, Sujet: data.subject, Message: data.message }),
+      });
+      if (!r.ok) throw new Error();
+      form.reset();
+      done("Message envoyé, merci ! Nous vous répondons rapidement.");
+    } catch (er) {
+      done("Ouverture de votre messagerie…");
+      window.location.href = `mailto:${to}?subject=${encodeURIComponent("[SMB] " + data.subject)}&body=${encodeURIComponent(`Nom : ${data.name}\nEmail : ${data.email}\n\n${data.message}`)}`;
+    }
   });
 }
 
@@ -6547,15 +6608,18 @@ const SMB_PRO_PRICING = [
   { name: "Sodium Sulfite", format: "250g", price: 30 },
 ];
 
+let SMB_PRO_SHOWN = 8;
 function renderProPricing() {
   const wrap = document.getElementById("proPricingTable");
   if (!wrap) return;
+  const total = SMB_PRO_PRICING.length;
+  const shown = Math.min(SMB_PRO_SHOWN, total);
   wrap.innerHTML = `
     <div class="admin-table-wrap">
       <table class="admin-table science-table">
         <thead><tr><th>Actif</th><th>Format</th><th>Prix</th><th></th></tr></thead>
         <tbody>
-          ${SMB_PRO_PRICING.map((item) => `
+          ${SMB_PRO_PRICING.slice(0, shown).map((item) => `
             <tr>
               <td>${item.name}</td>
               <td>${item.format}</td>
@@ -6564,7 +6628,19 @@ function renderProPricing() {
             </tr>`).join("")}
         </tbody>
       </table>
+    </div>
+    <div class="smb-pro-more">
+      <span>${shown} sur ${total} tarifs affichés</span>
+      ${shown < total ? `<button type="button" class="btn btn-outline-dark btn-sm" data-pro="more">Afficher plus de tarifs (${Math.min(10, total - shown)})</button>
+        <button type="button" class="btn btn-link" data-pro="all">Tout afficher</button>` : ""}
+      ${shown > 8 ? `<button type="button" class="btn btn-link" data-pro="less">Réduire</button>` : ""}
     </div>`;
+  wrap.querySelectorAll("[data-pro]").forEach((b) => b.addEventListener("click", () => {
+    const a = b.dataset.pro;
+    SMB_PRO_SHOWN = a === "more" ? SMB_PRO_SHOWN + 10 : a === "all" ? total : 8;
+    renderProPricing();
+    if (a === "less") wrap.scrollIntoView({ behavior: "smooth", block: "start" });
+  }));
 }
 
 function initRoutinePage() {
@@ -7896,6 +7972,7 @@ window.smbStartAdmin = function () {
     const fromHash = (location.hash.split('/')[2] || '').split('?')[0];
     openTab($('.adm-tab[data-tab="' + fromHash + '"]') ? fromHash : 'commandes');
     setInterval(refreshChatMetas, 60000);
+    loadContacts().catch(() => {});
   }
 
   async function loadAll() {
@@ -7938,6 +8015,7 @@ window.smbStartAdmin = function () {
       stock: () => { renderStock(); loadNotify(); },
       clients: renderClients,
       chat: renderChatList,
+      contacts: loadContacts,
       avis: loadReviews,
       newsletter: renderNewsletter,
       contenu: loadCms,
@@ -8025,7 +8103,7 @@ window.smbStartAdmin = function () {
           <button type="button" class="adm-act" data-act="order-print" data-id="${esc(o.id)}">🧾 Bon de commande</button>
           ${o.paymentStatus && o.paymentStatus !== 'payee' ? `<button type="button" class="adm-act" data-act="order-paid" data-id="${esc(o.id)}">✅ Marquer payée</button>` : ''}
           ${/^pi_/.test(o.providerTransactionId || '') ? `<a class="adm-act" target="_blank" rel="noopener" href="https://dashboard.stripe.com/payments/${encodeURIComponent(o.providerTransactionId)}">💳 Voir sur Stripe</a>` : ''}
-          ${tel ? `<a class="adm-act wa" target="_blank" rel="noopener" href="https://wa.me/${tel}?text=${encodeURIComponent(waText)}">💬 WhatsApp</a>` : ''}
+          <button type="button" class="adm-act wa" data-act="order-notify" data-id="${esc(o.id)}">💬 Prévenir la cliente</button>
           ${mail ? `<a class="adm-act" href="${mail}">✉ E-mail</a>` : ''}
           <span class="adm-grow"></span>
           <button type="button" class="adm-act" data-act="order-archive" data-id="${esc(o.id)}" data-to="${o.archived ? '0' : '1'}">${o.archived ? '↩ Restaurer' : '🗄 Archiver'}</button>
@@ -8055,24 +8133,14 @@ window.smbStartAdmin = function () {
     const o = S.orders.find((x) => String(x.id) === String(id));
     if (!o) return;
     const prev = o.status;
-    const tel = waNumber(o.tel);
-    const tpl = S.msg.templates[status];
-    const notify = tel && tpl && S.msg.settings.askWhatsApp &&
-      confirm(`Statut « ${status} » enregistré.\n\nPrévenir ${o.nom || 'la cliente'} sur WhatsApp ?${S.msg.settings.autoEmail && o.email ? '\n(Un e-mail lui est aussi envoyé automatiquement.)' : ''}`);
-    const win = notify ? window.open('', '_blank') : null; // ouvert tout de suite (anti pop-up)
     try {
       await fb.updateOrderStatus(o.id, status, o);
       o.status = status;
       if (select) select.style.color = STATUS_COLORS[status] || '';
       toast('Statut mis à jour : ' + status + ' ✦');
       renderStatsRow();
-      if (notify) {
-        const url = `https://wa.me/${tel}?text=${encodeURIComponent(fillMsg(tpl.text, o))}`;
-        if (win && !win.closed) win.location.href = url; else window.open(url, '_blank');
-      }
-      afterStatusChange(o, status);
+      openNotifyModal(o, status, true);
     } catch (e) {
-      if (win) win.close();
       if (select) select.value = prev;
       fail('Échec de la mise à jour', e);
     }
@@ -8566,6 +8634,7 @@ window.smbStartAdmin = function () {
     $('#pf-price').value = p.price || '';
     $('#pf-formats').innerHTML = (p.formats || []).map(formatRow).join('');
     if (!variable && p.formats && p.formats.length === 1 && p.formats[0].price != null) $('#pf-price').value = num(p.formats[0].price);
+    if (!variable && p.formats && p.formats[0]) $('#pf-size').value = p.formats[0].qty && p.formats[0].qty !== 'Unité' ? p.formats[0].qty : '';
     $('#pf-benefits').innerHTML = (p.benefits && p.benefits.length ? p.benefits : ['']).map(benefitRow).join('');
     syncType();
     const refs = (p.photos && p.photos.length) ? p.photos : (p.image ? [p.image] : []);
@@ -8633,7 +8702,7 @@ window.smbStartAdmin = function () {
       const badge = $('#pf-badge').value;
       const doc = {
         id, name, category, type, price, badge, desc,
-        formats: type === 'simple' ? [{ qty: ((allProducts().find((x) => x.id === id) || {}).formats || [{}])[0].qty || 'Unité', price }] : formats,
+        formats: type === 'simple' ? [{ qty: $('#pf-size').value.trim() || ((allProducts().find((x) => x.id === id) || {}).formats || [{}])[0].qty || 'Unité', price }] : formats,
         tags: $$('#pf-tags input:checked').map((c) => c.value),
         tagline: $('#pf-tagline').value.trim(),
         benefits: $$('#pf-benefits .bn').map((i) => i.value.trim()).filter(Boolean),
@@ -8713,11 +8782,12 @@ window.smbStartAdmin = function () {
     S.notify = await fb.getNotifyRequests();
     const box = $('#notify-list');
     if (!S.notify.length) { box.innerHTML = '<p class="adm-muted">Aucune demande pour l\'instant.</p>'; return; }
+    const doneCount = S.notify.filter((r) => r.notifiedAt).length;
     const names = Object.fromEntries(allProducts().map((p) => [p.id, p.name]));
     const groups = {};
     S.notify.forEach((r) => { (groups[r.productId] = groups[r.productId] || []).push(r); });
     const site = SITE.url && !/VOTRE/.test(SITE.url) ? '\n' + SITE.url : '';
-    box.innerHTML = Object.entries(groups).map(([pid, rows]) => {
+    box.innerHTML = (doneCount ? `<div class="adm-between"><span class="adm-muted adm-small">${S.notify.length} demande(s), dont ${doneCount} déjà prévenue(s)</span><button type="button" class="adm-act danger" data-act="notify-del-done">🗑 Supprimer toutes les demandes déjà prévenues</button></div>` : '') + Object.entries(groups).map(([pid, rows]) => {
       const pname = names[pid] || rows[0].productName || 'Produit #' + pid;
       const msg = `Bonjour ! 🌟\nVotre produit *${pname}* est de nouveau disponible chez ${BRAND}.\nCommandez dès maintenant ✨${site}`;
       const emails = rows.filter((r) => r.channel === 'email').map((r) => r.contact);
@@ -8726,7 +8796,9 @@ window.smbStartAdmin = function () {
         <div class="adm-actions"><span class="adm-pill" style="color:var(--gold)">${rows.filter((r) => !r.notifiedAt).length} en attente / ${rows.length}</span>
         ${rows.some((r) => r.channel === 'email' && !r.notifiedAt) ? `<button type="button" class="adm-act" data-act="notify-email" data-pid="${esc(pid)}">✉ Prévenir par e-mail (auto)</button>` : ''}
         ${emails.length ? `<a class="adm-act" href="mailto:?bcc=${encodeURIComponent(emails.join(','))}&subject=${encodeURIComponent('✨ ' + pname + ' est de nouveau disponible')}&body=${encodeURIComponent(msg.replace(/\*/g, ''))}">✉ E-mail groupé</a>` : ''}
-        ${phones.length ? `<button type="button" class="adm-act" data-act="copy" data-text="${esc(phones.join('\n'))}">📋 Copier les numéros</button>` : ''}</div></div>
+        ${phones.length ? `<button type="button" class="adm-act" data-act="copy" data-text="${esc(phones.join('\n'))}">📋 Copier les numéros</button>` : ''}
+        ${rows.some((r) => r.notifiedAt) ? `<button type="button" class="adm-act danger" data-act="notify-del-group" data-pid="${esc(pid)}" data-done="1">🗑 Supprimer les prévenues</button>` : ''}
+        <button type="button" class="adm-act danger" data-act="notify-del-group" data-pid="${esc(pid)}" data-done="0">🗑 Tout supprimer</button></div></div>
         ${rows.map((r) => {
           const link = r.channel === 'whatsapp'
             ? `<a class="adm-act wa" target="_blank" rel="noopener" href="https://wa.me/${waNumber(r.contact)}?text=${encodeURIComponent(msg)}">💬 Envoyer WhatsApp</a>`
@@ -8736,7 +8808,22 @@ window.smbStartAdmin = function () {
         }).join('')}</div>`;
     }).join('');
   }
-  ACT['notify-reload'] = loadNotify;
+  ACT['notify-reload'] = async (btn) => { busy(btn, true, '⏳ Actualisation…'); await loadNotify(); busy(btn, false); toast(`Liste actualisée : ${S.notify.length} demande(s) ✦`); };
+  ACT['notify-del-group'] = async (el) => {
+    const pid = el.dataset.pid, onlyDone = el.dataset.done === '1';
+    const list = S.notify.filter((r) => String(r.productId) === pid && (!onlyDone || r.notifiedAt));
+    if (!list.length || !confirm(`Supprimer ${list.length} demande(s)${onlyDone ? ' déjà prévenue(s)' : ''} ?`)) return;
+    for (const r of list) { try { await fb.deleteNotifyRequest(r._id); } catch (e) {} }
+    toast(`${list.length} demande(s) supprimée(s)`); loadNotify();
+  };
+  ACT['notify-del-done'] = async () => {
+    const list = S.notify.filter((r) => r.notifiedAt);
+    if (!list.length) return toast('Aucune demande déjà prévenue.');
+    if (!confirm(`Supprimer les ${list.length} demande(s) déjà prévenue(s) ?`)) return;
+    for (const r of list) { try { await fb.deleteNotifyRequest(r._id); } catch (e) {} }
+    toast(`${list.length} demande(s) supprimée(s)`); loadNotify();
+  };
+
   ACT['notify-delete'] = async (el) => { try { await fb.deleteNotifyRequest(el.dataset.id); loadNotify(); } catch (e) { fail('Échec', e); } };
   ACT.copy = async (el) => {
     try { await navigator.clipboard.writeText(el.dataset.text); toast('Copié dans le presse-papiers ✦'); }
@@ -8844,6 +8931,34 @@ window.smbStartAdmin = function () {
     } catch (er) { input.value = text; fail('Message non envoyé', er); }
   });
 
+  /* ============================== MESSAGES CLIENTES (page Contact) ============================== */
+  S.contacts = []; S.contactsFilter = 'todo';
+  async function loadContacts() {
+    S.contacts = await fb.getContactMessages();
+    const n = S.contacts.filter((m) => m.status !== 'traite').length;
+    const dot = $('#contacts-unread'); dot.hidden = !n; dot.textContent = n;
+    if (S.tab !== 'contacts') return;
+    $$('[data-act="contacts-filter"]').forEach((b) => b.classList.toggle('on', b.dataset.filter === S.contactsFilter));
+    const list = S.contacts.filter((m) => S.contactsFilter === 'all' || m.status !== 'traite');
+    $('#contacts-list').innerHTML = list.length ? list.map((m) => `<div class="adm-review" style="flex-direction:column;align-items:stretch">
+      <div class="adm-between" style="margin:0"><div><b>${esc(m.name)}</b> <span class="adm-muted adm-small">${esc(m.email)} · ${esc(m.date || '')} ${esc(m.heure || '')}</span></div>
+        <span class="adm-pill" style="color:${m.status === 'traite' ? 'var(--ok)' : 'var(--gold)'}">${m.status === 'traite' ? '✓ Traité' : '● À traiter'}</span></div>
+      <div class="adm-muted adm-small" style="margin-top:4px">Sujet : ${esc(m.subject || '')}</div>
+      <p style="margin:8px 0;white-space:pre-wrap">${esc(m.message)}</p>
+      <div class="adm-actions">
+        <a class="adm-act" href="mailto:${encodeURIComponent(m.email)}?subject=${encodeURIComponent('Re : ' + (m.subject || 'votre message') + ' — ' + BRAND)}&body=${encodeURIComponent('Bonjour ' + (m.name || '').split(' ')[0] + ',\n\n\n\n' + SIGN + '\n\n— Votre message :\n' + m.message)}">✉ Répondre</a>
+        <button type="button" class="adm-act" data-act="contact-done" data-id="${esc(m._id)}" data-to="${m.status === 'traite' ? 'nouveau' : 'traite'}">${m.status === 'traite' ? '↩ Remettre à traiter' : '✓ Marquer traité'}</button>
+        <button type="button" class="adm-act danger" data-act="contact-del" data-id="${esc(m._id)}">🗑 Supprimer</button>
+      </div></div>`).join('') : `<div class="adm-empty">${S.contactsFilter === 'todo' ? 'Aucun message à traiter ✦' : 'Aucun message pour l\'instant.'}</div>`;
+  }
+  ACT['contacts-reload'] = async (btn) => { busy(btn, true, '⏳'); await loadContacts(); busy(btn, false); toast('Messages actualisés ✦'); };
+  ACT['contacts-filter'] = (el) => { S.contactsFilter = el.dataset.filter; loadContacts(); };
+  ACT['contact-done'] = async (el) => { try { await fb.updateContactMessage(el.dataset.id, { status: el.dataset.to }); loadContacts(); } catch (e) { fail('Échec', e); } };
+  ACT['contact-del'] = async (el) => {
+    if (!confirm('Supprimer définitivement ce message ?')) return;
+    try { await fb.deleteContactMessage(el.dataset.id); toast('Message supprimé'); loadContacts(); } catch (e) { fail('Échec', e); }
+  };
+
   /* ============================== AVIS ============================== */
   async function loadReviews() {
     const box = $('#reviews-list');
@@ -8950,20 +9065,27 @@ window.smbStartAdmin = function () {
   const MSG_DEFAULTS = {
     settings: { autoEmail: true, askWhatsApp: true, autoStockEmail: true },
     templates: {
-      'À vérifier': { subject: 'Votre commande #{commande} est en cours de vérification', text: `Bonjour {prenom},\n\nNous avons bien reçu votre commande #{commande} ({total}).\nNous n'avons pas encore la confirmation de votre paiement : dès qu'elle arrive, nous préparons votre colis.\n\nUne question ? Répondez simplement à cet e-mail.\n\n${SIGN}` },
+      'À vérifier': { subject: 'Votre commande #{commande} est en cours d\'examen', text: `Bonjour {prenom},\n\nVotre commande #{commande} ({total}) est en cours d'examen : nous n'avons pas encore reçu votre paiement.\nDès qu'il nous parvient, nous préparons votre colis et vous prévenons.\n\nUne question ? Répondez simplement à ce message.\n\n${SIGN}` },
       'En attente': { subject: 'Votre commande #{commande} est bien enregistrée', text: `Bonjour {prenom},\n\nMerci pour votre commande #{commande} ({total}) !\nElle est bien enregistrée.\n\nProduits : {produits}\nSuivi : {suivi}\n\n${SIGN}` },
       'En cours': { subject: 'Votre commande #{commande} est en préparation', text: `Bonjour {prenom},\n\nBonne nouvelle : votre commande #{commande} est en cours de préparation.\nNous vous prévenons dès qu'elle est expédiée.\n\nSuivi : {suivi}\n\n${SIGN}` },
       'Expédié': { subject: 'Votre commande #{commande} est en route 🚚', text: `Bonjour {prenom},\n\nVotre commande #{commande} vient d'être expédiée ({livraison}).\nSuivez son avancement ici : {suivi}\n\n${SIGN}` },
       'Livré': { subject: 'Votre commande #{commande} est livrée ✨', text: `Bonjour {prenom},\n\nVotre commande #{commande} a bien été livrée. Merci pour votre confiance !\nVotre avis compte beaucoup : vous pouvez en laisser un sur notre site : {site}\n\n${SIGN}` },
       'Annulé': { subject: 'Votre commande #{commande} a été annulée', text: `Bonjour {prenom},\n\nVotre commande #{commande} a été annulée. Si vous avez déjà payé, nous revenons vers vous très vite pour le remboursement.\nUne question ? Répondez simplement à cet e-mail.\n\n${SIGN}` },
+      '_paiement': { subject: 'Commande #{commande} : paiement en attente', text: `Bonjour {prenom},\n\nNous n'avons pas encore reçu le paiement de votre commande #{commande} ({total}).\nPour la finaliser, vous pouvez régler par virement (référence : {commande}) ou nous contacter pour un autre moyen de paiement.\n\nVotre commande reste réservée quelques jours.\n\n${SIGN}` },
+      '_retard': { subject: 'Commande #{commande} : petit retard de livraison', text: `Bonjour {prenom},\n\nVotre commande #{commande} prend un peu de retard, toutes nos excuses.\nElle est bien prise en charge et nous vous tenons informée dès son expédition.\n\nMerci pour votre patience.\n\n${SIGN}` },
+      '_adresse': { subject: 'Commande #{commande} : adresse à compléter', text: `Bonjour {prenom},\n\nPour expédier votre commande #{commande}, il nous manque une précision sur votre adresse de livraison ({livraison}).\nPouvez-vous nous répondre avec l'adresse complète (rue, code postal, ville) ?\n\n${SIGN}` },
+      '_avis': { subject: 'Que pensez-vous de vos actifs ?', text: `Bonjour {prenom},\n\nVous avez reçu votre commande #{commande} il y a quelques jours. Comment se passent vos premières utilisations ?\nVotre avis aide beaucoup d'autres clientes : {site}\n\nMerci infiniment !\n\n${SIGN}` },
       '_stock': { subject: '✨ {produit} est de nouveau disponible !', text: `Bonjour,\n\nBonne nouvelle : {produit} est de nouveau disponible chez Secret de Maryline Beauty.\nCommandez-le dès maintenant, avant une nouvelle rupture : {site}\n\n${SIGN}` }
     }
   };
-  const MSG_LABELS = { 'À vérifier': '⏳ Commande à vérifier', 'En attente': '📥 Commande enregistrée', 'En cours': '🧪 En préparation', 'Expédié': '🚚 Expédiée', 'Livré': '✨ Livrée', 'Annulé': '✕ Annulée', '_stock': '🔔 Retour en stock' };
+  const MSG_LABELS = { 'À vérifier': '⏳ En cours d\'examen (paiement non reçu)', 'En attente': '📥 Commande enregistrée', 'En cours': '🧪 En préparation', 'Expédié': '🚚 Expédiée', 'Livré': '✨ Livrée', 'Annulé': '✕ Annulée',
+    '_paiement': '💳 Relance paiement', '_retard': '⏱ Retard de livraison', '_adresse': '📍 Adresse à compléter', '_avis': '⭐ Demande d\'avis', '_stock': '🔔 Retour en stock' };
+  const msgLabel = (k) => MSG_LABELS[k] || (S.msg.templates[k] && S.msg.templates[k].label) || k;
   S.msg = JSON.parse(JSON.stringify(MSG_DEFAULTS));
   async function loadMsgConfig() {
     const c = (await fb.getConfig('messages')) || {};
     S.msg = { settings: { ...MSG_DEFAULTS.settings, ...(c.settings || {}) }, templates: { ...MSG_DEFAULTS.templates, ...(c.templates || {}) } };
+    if (!S.msg.templates[S.msgKey]) S.msgKey = 'Expédié';
     return S.msg;
   }
   S.msgKey = 'Expédié';
@@ -8983,7 +9105,9 @@ window.smbStartAdmin = function () {
       <div class="adm-card">
         <div class="adm-card-head"><span>✉️</span><div><h2>Modèles de messages</h2>
           <p class="adm-muted">Mots remplacés automatiquement : <code>{prenom}</code> <code>{commande}</code> <code>{total}</code> <code>{produits}</code> <code>{livraison}</code> <code>{suivi}</code> (lien de suivi) <code>{site}</code> <code>{produit}</code> (retour en stock).</p></div></div>
-        <div class="adm-filters">${Object.keys(MSG_DEFAULTS.templates).map((k) => `<button type="button" class="adm-tool ${k === S.msgKey ? 'on' : ''}" data-act="msg-pick" data-key="${esc(k)}">${esc(MSG_LABELS[k] || k)}</button>`).join('')}</div>
+        <div class="adm-filters">${Object.keys(S.msg.templates).map((k) => `<button type="button" class="adm-tool ${k === S.msgKey ? 'on' : ''}" data-act="msg-pick" data-key="${esc(k)}">${esc(msgLabel(k))}</button>`).join('')}
+        <button type="button" class="adm-tool gold" data-act="msg-new">+ Nouveau message</button></div>
+      ${/^c_/.test(S.msgKey) ? `<p class="adm-muted">Message personnalisé — <button type="button" class="adm-link" data-act="msg-del">🗑 supprimer ce message</button></p>` : ''}
         <div class="adm-field"><label for="msg-subject">Objet de l'e-mail</label><input id="msg-subject" type="text" maxlength="150" value="${esc(t.subject)}"></div>
         <div class="adm-field"><label for="msg-text">Message (e-mail et WhatsApp)</label><textarea id="msg-text" rows="10" maxlength="4000">${esc(t.text)}</textarea></div>
         <div class="adm-row">
@@ -9017,12 +9141,77 @@ window.smbStartAdmin = function () {
     try { await saveMsg(); toast('Réglage enregistré ✦'); } catch (er) { fail('Échec', er); }
   });
 
-  async function afterStatusChange(o, status) {
-    const tpl = S.msg.templates[status];
-    if (!tpl || !S.msg.settings.autoEmail || !o.email) return;
-    const r = await sendEmails([{ to: o.email, name: o.nom, subject: fillMsg(tpl.subject, o), text: fillMsg(tpl.text, o) }]);
-    toast(r.ok ? 'E-mail envoyé à ' + o.email + ' ✦' : 'E-mail non envoyé — ' + (r.code ? mailErrorText(r.code, r.message) : r.results && r.results[0] ? mailErrorText(r.results[0].error, r.results[0].detail) : (r.message || 'erreur')));
+  const mailWhy = (r) => (r.code ? mailErrorText(r.code, r.message) : r.results && r.results[0] ? mailErrorText(r.results[0].error, r.results[0].detail) : (r.message || 'erreur'));
+
+  /* Fenêtre « Prévenir la cliente » : message prêt (modifiable), e-mail automatique, WhatsApp en un clic */
+  async function openNotifyModal(o, status, auto) {
+    let m = $('#adm-notify-modal');
+    if (!m) {
+      m = document.createElement('div');
+      m.id = 'adm-notify-modal'; m.className = 'adm-modal'; m.setAttribute('role', 'dialog'); m.setAttribute('aria-modal', 'true'); m.setAttribute('aria-labelledby', 'nm-title');
+      (document.getElementById('smb-admin-root') || document.body).appendChild(m);
+    }
+    const keys = Object.keys(S.msg.templates).filter((k) => k !== '_stock');
+    const key = S.msg.templates[status] ? status : keys[0];
+    m.dataset.id = o.id;
+    m.innerHTML = `<div class="adm-modal-box">
+      <div class="adm-between"><h2 id="nm-title">Prévenir la cliente</h2><button type="button" class="adm-act" data-act="nm-close" aria-label="Fermer">✕</button></div>
+      <p class="adm-muted">${esc(o.nom || '')} · #${esc(o.id)}${status ? ' · statut <b>' + esc(status) + '</b>' : ''}</p>
+      <p class="adm-small" id="nm-auto" aria-live="polite"></p>
+      <div class="adm-field"><label for="nm-tpl">Message prêt à envoyer</label>
+        <select id="nm-tpl">${keys.map((k) => `<option value="${esc(k)}" ${k === key ? 'selected' : ''}>${esc(msgLabel(k))}</option>`).join('')}</select></div>
+      <div class="adm-field"><label for="nm-subject">Objet (e-mail)</label><input id="nm-subject" type="text" maxlength="150"></div>
+      <div class="adm-field"><label for="nm-text">Message</label><textarea id="nm-text" rows="9" maxlength="4000"></textarea></div>
+      <div class="adm-row">
+        ${waNumber(o.tel) ? '<button type="button" class="adm-btn adm-btn-ghost" data-act="nm-wa" style="color:#25D366;border-color:rgba(37,211,102,.4)">💬 Envoyer par WhatsApp</button>' : '<span class="adm-muted adm-small">Pas de numéro WhatsApp</span>'}
+        ${o.email ? '<button type="button" class="adm-btn adm-btn-ghost" data-act="nm-mail" id="nm-mail-btn">✉ Envoyer l\'e-mail</button>' : '<span class="adm-muted adm-small">Pas d\'e-mail</span>'}
+        <span class="adm-grow"></span><button type="button" class="adm-btn adm-btn-ghost" data-act="nm-close">Fermer</button>
+      </div></div>`;
+    const fillTpl = () => { const t = S.msg.templates[$('#nm-tpl').value] || {}; $('#nm-subject').value = fillMsg(t.subject || '', o); $('#nm-text').value = fillMsg(t.text || '', o); };
+    fillTpl();
+    $('#nm-tpl').addEventListener('change', fillTpl);
+    m.hidden = false;
+    const autoBox = $('#nm-auto');
+    if (auto && S.msg.settings.autoEmail && o.email && S.msg.templates[status]) {
+      autoBox.textContent = '⏳ Envoi automatique de l\'e-mail…';
+      const r = await sendEmails([{ to: o.email, name: o.nom, subject: $('#nm-subject').value, text: $('#nm-text').value }]);
+      autoBox.style.color = r.ok ? 'var(--ok)' : 'var(--danger)';
+      autoBox.textContent = r.ok ? '✓ E-mail envoyé automatiquement à ' + o.email : '✗ E-mail non envoyé — ' + mailWhy(r);
+      if (r.ok && $('#nm-mail-btn')) $('#nm-mail-btn').textContent = '✉ Renvoyer l\'e-mail';
+    } else if (auto && o.email && !S.msg.settings.autoEmail) {
+      autoBox.textContent = 'E-mail automatique désactivé (onglet Messages automatiques).';
+    }
   }
+  ACT['nm-close'] = () => { const m = $('#adm-notify-modal'); if (m) m.hidden = true; };
+  ACT['nm-wa'] = () => {
+    const o = S.orders.find((x) => x.id === $('#adm-notify-modal').dataset.id); if (!o) return;
+    window.open(`https://wa.me/${waNumber(o.tel)}?text=${encodeURIComponent($('#nm-text').value)}`, '_blank', 'noopener');
+  };
+  ACT['nm-mail'] = async (btn) => {
+    const o = S.orders.find((x) => x.id === $('#adm-notify-modal').dataset.id); if (!o) return;
+    busy(btn, true, 'Envoi…');
+    const r = await sendEmails([{ to: o.email, name: o.nom, subject: $('#nm-subject').value, text: $('#nm-text').value }]);
+    busy(btn, false);
+    const box = $('#nm-auto');
+    box.style.color = r.ok ? 'var(--ok)' : 'var(--danger)';
+    box.textContent = r.ok ? '✓ E-mail envoyé à ' + o.email : '✗ E-mail non envoyé — ' + mailWhy(r);
+  };
+  ACT['order-notify'] = (el) => { const o = S.orders.find((x) => x.id === el.dataset.id); if (o) openNotifyModal(o, o.status, false); };
+  document.addEventListener('keydown', (e) => { const m = $('#adm-notify-modal'); if (e.key === 'Escape' && m && !m.hidden) m.hidden = true; });
+  ACT['msg-new'] = () => {
+    const label = (prompt('Nom du nouveau message (ex : Colis retenu en douane) :') || '').trim();
+    if (label.length < 2) return;
+    const k = 'c_' + Date.now().toString(36);
+    S.msg.templates[k] = { label: label.slice(0, 50), subject: label.slice(0, 120), text: `Bonjour {prenom},\n\n…\n\n${SIGN}` };
+    S.msgKey = k;
+    fb.setConfig('messages', { settings: S.msg.settings, templates: S.msg.templates }).then(() => { toast('Message créé : écrivez-le puis enregistrez ✦'); renderMessages(); }).catch((e) => fail('Échec', e));
+  };
+  ACT['msg-del'] = () => {
+    if (!/^c_/.test(S.msgKey) || !confirm('Supprimer ce message personnalisé ?')) return;
+    delete S.msg.templates[S.msgKey]; S.msgKey = 'Expédié';
+    fb.setConfig('messages', { settings: S.msg.settings, templates: S.msg.templates }).then(() => renderMessages()).catch((e) => fail('Échec', e));
+  };
+
 
   /* ---------- Retour en stock : prévenir par e-mail ---------- */
   async function backInStock(pid) {
@@ -9247,20 +9436,43 @@ window.smbStartAdmin = function () {
     box.innerHTML = baseTags.map((t) => `<span class="adm-pill" style="color:var(--muted)">${esc(t.label)}</span>`).join(' ') + ' ' +
       S.tax.tags.map((t) => `<span class="adm-pill" style="color:var(--gold)">${esc(t.label)} <button type="button" class="adm-x" data-act="tax-del" data-id="${esc(t.id)}" aria-label="Supprimer l'étiquette ${esc(t.label)}">✕</button></span>`).join(' ');
   }
-  async function loadTaxonomy() { const t = await fb.getConfig('taxonomy'); S.tax = { tags: (t && t.tags) || [] }; renderTaxonomy(); renderPfTags(); }
+  async function loadTaxonomy() { const t = await fb.getConfig('taxonomy'); S.tax = { tags: (t && t.tags) || [], categories: (t && t.categories) || [] }; renderTaxonomy(); renderPfTags(); renderPfCategories(); }
+  const saveTaxonomy = () => fb.setConfig('taxonomy', { tags: S.tax.tags, categories: S.tax.categories || [] });
+  function renderPfCategories() {
+    const sel = $('#pf-category'); if (!sel) return;
+    const have = new Set([...sel.options].map((o) => o.value));
+    (S.tax.categories || []).forEach((c) => { if (!have.has(c)) sel.insertAdjacentHTML('beforeend', `<option>${esc(c)}</option>`); });
+  }
+  ACT['cat-add'] = async () => {
+    const name = (prompt('Nom de la nouvelle catégorie (ex : Huiles végétales) :') || '').trim().slice(0, 40);
+    if (name.length < 2) return;
+    S.tax.categories = S.tax.categories || [];
+    if (!S.tax.categories.includes(name)) S.tax.categories.push(name);
+    try { await saveTaxonomy(); renderPfCategories(); $('#pf-category').value = name; toast('Catégorie « ' + name + ' » créée ✦'); } catch (e) { fail('Échec', e); }
+  };
+  ACT['tag-add-inline'] = async () => {
+    const label = (prompt('Nom de la nouvelle étiquette (ex : Bio) :') || '').trim();
+    if (label.length < 2) return;
+    const id = slug(label);
+    if (allTags().some((t) => t.id === id)) return toast('Cette étiquette existe déjà.');
+    S.tax.tags.push({ id, label: label.slice(0, 40), objectif: label.slice(0, 60) });
+    try { await saveTaxonomy(); renderTaxonomy(); renderPfTags(); const c = $(`#pf-tags input[value="${id}"]`); if (c) c.checked = true; toast('Étiquette ajoutée (aussi dans les filtres de la boutique) ✦'); }
+    catch (e) { S.tax.tags.pop(); fail('Échec', e); }
+  };
+
   ACT['tax-add'] = async () => {
     const label = $('#tax-label').value.trim(), objectif = $('#tax-goal').value.trim();
     if (label.length < 2) return toast('Écrivez le nom de l\'étiquette.');
     const id = slug(label);
     if (allTags().some((t) => t.id === id)) return toast('Cette étiquette existe déjà.');
     S.tax.tags.push({ id, label: label.slice(0, 40), objectif: (objectif || label).slice(0, 60) });
-    try { await fb.setConfig('taxonomy', { tags: S.tax.tags }); $('#tax-label').value = ''; $('#tax-goal').value = ''; renderTaxonomy(); renderPfTags(); toast('Étiquette ajoutée : elle apparaît aussi dans les filtres de la boutique ✦'); }
+    try { await saveTaxonomy(); $('#tax-label').value = ''; $('#tax-goal').value = ''; renderTaxonomy(); renderPfTags(); toast('Étiquette ajoutée : elle apparaît aussi dans les filtres de la boutique ✦'); }
     catch (e) { S.tax.tags.pop(); fail('Échec', e); }
   };
   ACT['tax-del'] = async (el) => {
     if (!confirm('Supprimer cette étiquette ? Les produits qui l\'utilisent ne seront plus filtrables avec.')) return;
     S.tax.tags = S.tax.tags.filter((t) => t.id !== el.dataset.id);
-    try { await fb.setConfig('taxonomy', { tags: S.tax.tags }); renderTaxonomy(); renderPfTags(); } catch (e) { fail('Échec', e); }
+    try { await saveTaxonomy(); renderTaxonomy(); renderPfTags(); } catch (e) { fail('Échec', e); }
   };
 
   /* ============================== CONTENU DU SITE ============================== */
@@ -9766,6 +9978,11 @@ function init() {
 
     /* ---- Alertes disponibilité : marquer comme prévenue ---- */
     markNotifyRequest: (id, fields) => updateDoc(doc(db, 'notify_requests', id), fields),
+
+    /* ---- Messages de la page Contact (admin) ---- */
+    async getContactMessages() { try { return (await all('contact_messages')).sort((a, b) => (b.at || 0) - (a.at || 0)); } catch (e) { warn('messages contact')(e); return []; } },
+    updateContactMessage: (id, f) => updateDoc(doc(db, 'contact_messages', id), f),
+    deleteContactMessage: (id) => deleteDoc(doc(db, 'contact_messages', id)),
 
     /* ---- Avis ---- */
     async saveReview(r) {

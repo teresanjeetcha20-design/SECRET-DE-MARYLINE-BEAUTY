@@ -29,3 +29,19 @@ test('Brevo refuse : code + message transmis à l\'admin (pour expliquer la caus
   const r = await m.send({ to: 'lea@test.fr', subject: 'S', text: 'T' });
   assert.equal(r.error, 'unauthorized'); assert.match(r.detail, /IP address/);
 });
+import { createNotifier } from '../netlify/lib/notify.mjs';
+test('alerte commerçante : envoyée par Brevo quand il est configuré (réponse directe à la cliente)', async () => {
+  const sent = [];
+  const mailer = { configured: true, send: async (m) => { sent.push(m); return { ok: true }; } };
+  let formsubmit = 0;
+  const n = createNotifier({ merchantEmail: 'boutique@test.fr', mailer, fetchImpl: async () => { formsubmit++; return { ok: true }; } });
+  await n.notifyPaid({ id: 'SMBX', amount: 26.9, nom: 'Awa', tel: '06', email: 'awa@test.fr', items: 'NAG ×1', adresse: '1 rue A', ville: 'Lyon', pays: 'France' });
+  assert.equal(sent.length, 1); assert.equal(sent[0].to, 'boutique@test.fr'); assert.equal(sent[0].replyTo, 'awa@test.fr');
+  assert.match(sent[0].text, /26,9 €|26,90 €/); assert.equal(formsubmit, 0);
+});
+test('alerte commerçante : secours FormSubmit si Brevo échoue', async () => {
+  let formsubmit = 0;
+  const n = createNotifier({ merchantEmail: 'b@test.fr', mailer: { configured: true, send: async () => ({ ok: false, error: 'x' }) }, fetchImpl: async () => { formsubmit++; return { ok: true }; } });
+  await n.notifyNew({ id: 'SMBX', amount: 10, nom: 'A', tel: '06', items: 'x' });
+  assert.equal(formsubmit, 1);
+});

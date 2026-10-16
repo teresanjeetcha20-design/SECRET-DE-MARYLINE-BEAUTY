@@ -6,9 +6,24 @@ import { SHOP_NAME } from './config.mjs';
  *  - quand une commande est PAYÉE en ligne ;
  *  - quand une commande par VIREMENT est passée.
  */
-export function createNotifier({ merchantEmail, fetchImpl = fetch } = {}) {
+export function createNotifier({ merchantEmail, mailer = null, fetchImpl = fetch } = {}) {
   async function send(subject, order, extra = {}) {
     if (!merchantEmail) return false;
+    // 1. Brevo (fiable, déjà configuré pour les e-mails aux clientes)
+    if (mailer && mailer.configured) {
+      const lines = [
+        `Commande : #${order.id}`,
+        `Montant : ${formatEUR(order.amount)}${order.paymentCurrency && order.paymentCurrency !== 'EUR' ? ` (payé ${formatMoney(order.paymentAmount, order.paymentCurrency)})` : ''}`,
+        `Cliente : ${order.nom}${order.type === 'professionnel' && order.societe ? ' — ' + order.societe : ''}`,
+        `Téléphone : ${order.tel}`, `E-mail : ${order.email || '—'}`,
+        `Livraison : ${[order.adresse, [order.codePostal, order.ville].filter(Boolean).join(' '), order.pays].filter(Boolean).join(', ')}`,
+        `Articles : ${order.items}`,
+        ...Object.entries(extra).map(([k, v]) => `${k} : ${v}`),
+      ];
+      const r = await mailer.send({ to: merchantEmail, subject, text: lines.join('\n'), replyTo: order.email || undefined });
+      if (r.ok) return true;
+    }
+    // 2. Secours : FormSubmit (nécessite une activation au premier envoi)
     try {
       const r = await fetchImpl(`https://formsubmit.co/ajax/${encodeURIComponent(merchantEmail)}`, {
         method: 'POST',

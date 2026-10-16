@@ -23,7 +23,7 @@ export function renderEmailHtml(text, siteUrl, unsubscribeUrl) {
 
 export function createMailer({ apiKey, fromEmail, fromName = SHOP_NAME, replyTo, siteUrl = '', fetchImpl = fetch } = {}) {
   const configured = !!(apiKey && fromEmail);
-  async function send({ to, name, subject, text, unsubscribeUrl }) {
+  async function send({ to, name, subject, text, unsubscribeUrl, replyTo: replyOverride }) {
     if (!configured) return { ok: false, error: 'NOT_CONFIGURED' };
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(to || ''))) return { ok: false, error: 'BAD_EMAIL' };
     const plain = String(text || '').slice(0, 5000) + (unsubscribeUrl ? `\n\n—\nSe désinscrire : ${unsubscribeUrl}` : '');
@@ -33,7 +33,7 @@ export function createMailer({ apiKey, fromEmail, fromName = SHOP_NAME, replyTo,
       subject: String(subject || SHOP_NAME).slice(0, 150),
       htmlContent: renderEmailHtml(String(text || '').slice(0, 5000), siteUrl, unsubscribeUrl),
       textContent: plain,
-      ...(replyTo ? { replyTo: { email: replyTo } } : {}),
+      ...((replyOverride || replyTo) ? { replyTo: { email: replyOverride || replyTo } } : {}),
       ...(unsubscribeUrl ? { headers: { 'List-Unsubscribe': `<${unsubscribeUrl}>` } } : {}),
     };
     try {

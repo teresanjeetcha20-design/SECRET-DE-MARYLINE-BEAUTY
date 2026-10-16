@@ -99,3 +99,21 @@ Firestore › **Règles** › colle le nouveau `firestore.rules` › **Publier**
 
 ## Passer en réel
 Stripe : clés `sk_live_…` + nouveau webhook en mode réel. PayPal : `PAYPAL_ENV=live` + identifiants live. PawaPay : onboarding terminé, `PAWAPAY_ENV=production`, nouveau jeton, callback déclarée en production. Redéployer, puis faire un vrai petit paiement par moyen.
+
+---
+
+## Nouveautés de la version 8
+
+- **« Prévenir la cliente »** : après chaque changement de statut, une fenêtre s'ouvre avec le message prêt (modifiable). L'e-mail part automatiquement, la fenêtre indique s'il est bien parti (ou pourquoi il n'est pas parti), et un bouton envoie le même message sur WhatsApp. Le bouton « 💬 Prévenir la cliente » sur chaque commande permet de l'ouvrir à tout moment.
+- **Messages prêts** (onglet Messages automatiques) : un par statut, plus « Relance paiement », « Retard de livraison », « Adresse à compléter », « Demande d'avis », et **+ Nouveau message** pour créer les tiens.
+- **Fiche produit** : « + Nouvelle catégorie » et « + Nouvelle étiquette ». Produit simple : uniquement le prix et la contenance (ex. 30 ml).
+- **Stock** : « Actualiser » confirme le rechargement ; suppression des demandes déjà prévenues (une par une, par produit, ou toutes).
+- **Page Contact** : les messages arrivent dans l'admin (onglet **Messages clientes**) et par e-mail via Brevo. Les alertes de commande passent aussi par Brevo.
+- **Paiement** : les 4 moyens sont toujours affichés ; ceux qui ne sont pas encore prêts sont grisés avec la raison (« Bientôt disponible », « Frais de livraison à confirmer »).
+- **Professionnels** : la grille tarifaire affiche 8 lignes, avec « Afficher plus » et « Tout afficher ».
+
+⚠️ Après la mise à jour : **republier `firestore.rules`** dans Firebase (nouvelle collection des messages de contact).
+
+## E-mails : « envoyé » mais rien reçu ?
+Brevo a accepté l'e-mail, mais il a été bloqué ou classé en spam. Pour savoir pourquoi : Brevo › **Transactionnel › Journaux** (ou « Logs »), cherche l'adresse de la cliente. Statuts possibles : *Délivré* (regarder les spams), *Bloqué*, *Rejet (bounce)*.
+La cause la plus fréquente : l'expéditeur est une adresse **Yahoo ou Gmail**. Ces services refusent qu'un autre serveur envoie en leur nom. Solution durable : une adresse à ton nom de domaine (ex. contact@secretdemarylinebeauty.fr), puis Brevo › Expéditeurs, domaines › **Authentifier le domaine** (Brevo donne les lignes DNS à copier chez ton fournisseur de domaine).
