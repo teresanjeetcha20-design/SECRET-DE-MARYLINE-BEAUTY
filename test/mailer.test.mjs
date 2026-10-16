@@ -24,3 +24,8 @@ test('jeton de désinscription : valide, falsifié, autre secret', () => {
   assert.equal(readUnsubscribeToken(t, 'autre'), null);
   assert.equal(readUnsubscribeToken(Buffer.from('autre@test.fr').toString('base64url') + '.' + t.split('.')[1], 'secret'), null);
 });
+test('Brevo refuse : code + message transmis à l\'admin (pour expliquer la cause)', async () => {
+  const m = createMailer({ apiKey: 'k', fromEmail: 'b@test.fr', fetchImpl: async () => ({ status: 401, json: async () => ({ code: 'unauthorized', message: 'We have detected you are using an unrecognised IP address 1.2.3.4' }) }) });
+  const r = await m.send({ to: 'lea@test.fr', subject: 'S', text: 'T' });
+  assert.equal(r.error, 'unauthorized'); assert.match(r.detail, /IP address/);
+});

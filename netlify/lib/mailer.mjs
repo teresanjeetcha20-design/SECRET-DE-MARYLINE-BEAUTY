@@ -43,7 +43,7 @@ export function createMailer({ apiKey, fromEmail, fromName = SHOP_NAME, replyTo,
       });
       if (r.status >= 200 && r.status < 300) return { ok: true };
       let j = null; try { j = await r.json(); } catch (_) {}
-      return { ok: false, error: (j && (j.code || j.message)) || `HTTP_${r.status}` };
+      return { ok: false, error: (j && j.code) || `HTTP_${r.status}`, detail: String((j && j.message) || '').slice(0, 240) };
     } catch (e) { return { ok: false, error: 'NETWORK' }; }
   }
   return { configured, send };

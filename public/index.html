@@ -8904,6 +8904,22 @@ window.smbStartAdmin = function () {
     catch (e) { mailConfigured = false; }
     return mailConfigured;
   }
+  /* Explication en français des erreurs d'envoi (Brevo / serveur) */
+  function mailErrorText(code, detail) {
+    const d = String(detail || '').toLowerCase();
+    if (code === 'unauthorized' && /ip/.test(d)) return 'Brevo bloque l\'adresse IP du site : dans Brevo › ton nom › Sécurité › Adresses IP autorisées, désactive le blocage (ou autorise l\'IP indiquée dans l\'e-mail reçu de Brevo).';
+    if (code === 'unauthorized' || code === 'HTTP_401') return 'Clé Brevo refusée : vérifie la variable BREVO_API_KEY dans Netlify (clé complète commençant par xkeysib-), puis relance le site (Deploys › Trigger deploy).';
+    if (/sender/.test(d) || code === 'invalid_parameter' && /sender|from/.test(d)) return 'Expéditeur non validé dans Brevo : MAIL_FROM_EMAIL doit être exactement l\'adresse validée dans Brevo › Expéditeurs.';
+    if (code === 'permission_denied' || /not (yet )?activated|suspended|blocked/.test(d)) return 'Compte Brevo pas encore activé pour l\'envoi (vérification en cours ou informations à compléter) : regarde les e-mails reçus de Brevo.';
+    if (code === 'NOT_CONFIGURED') return 'Envoi d\'e-mails pas configuré : ajoute BREVO_API_KEY et MAIL_FROM_EMAIL dans Netlify, puis relance le site.';
+    if (code === 'FIREBASE_NOT_CONFIGURED') return 'Identifiants Firebase manquants dans Netlify (FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY, FIREBASE_PROJECT_ID), puis relance le site.';
+    if (code === 'BAD_EMAIL') return 'Adresse e-mail invalide.';
+    if (code === 'UNSUBSCRIBED') return 'Personne désinscrite.';
+    if (code === 'NETWORK') return 'Brevo injoignable pour le moment : réessaie dans quelques minutes.';
+    if (code === 'HTTP_429' || /limit|quota/.test(d)) return 'Limite d\'envoi Brevo atteinte (300 e-mails/jour en offre gratuite) : réessaie demain.';
+    return (detail || code || 'erreur inconnue');
+  }
+
   async function sendEmails(messages, opts = {}) {
     try {
       const token = await fb.getIdToken();
@@ -8990,7 +9006,9 @@ window.smbStartAdmin = function () {
     busy(btn, true, 'Envoi…');
     const r = await sendEmails([{ to: me, subject: '[TEST] ' + fillMsg(S.msg.templates[S.msgKey].subject, sample), text: fillMsg(S.msg.templates[S.msgKey].text, sample) }]);
     busy(btn, false);
-    toast(r.ok ? 'E-mail de test envoyé à ' + me + ' ✦' : 'Échec : ' + (r.message || (r.results && r.results[0] && r.results[0].error) || 'erreur'));
+    const why = r.ok ? '' : (r.code ? mailErrorText(r.code, r.message) : r.results && r.results[0] ? mailErrorText(r.results[0].error, r.results[0].detail) : (r.message || 'erreur'));
+    toast(r.ok ? 'E-mail de test envoyé à ' + me + ' ✦' : 'Échec : ' + why);
+    if (!r.ok) alert('L\'e-mail de test n\'est pas parti.\n\nCause : ' + why);
   };
   document.addEventListener('change', async (e) => {
     const k = e.target.dataset && e.target.dataset.msgSet;
@@ -9003,7 +9021,7 @@ window.smbStartAdmin = function () {
     const tpl = S.msg.templates[status];
     if (!tpl || !S.msg.settings.autoEmail || !o.email) return;
     const r = await sendEmails([{ to: o.email, name: o.nom, subject: fillMsg(tpl.subject, o), text: fillMsg(tpl.text, o) }]);
-    toast(r.ok ? 'E-mail envoyé à ' + o.email + ' ✦' : 'E-mail non envoyé — ' + (r.message || (r.results && r.results[0] && r.results[0].error) || 'erreur'));
+    toast(r.ok ? 'E-mail envoyé à ' + o.email + ' ✦' : 'E-mail non envoyé — ' + (r.code ? mailErrorText(r.code, r.message) : r.results && r.results[0] ? mailErrorText(r.results[0].error, r.results[0].detail) : (r.message || 'erreur')));
   }
 
   /* ---------- Retour en stock : prévenir par e-mail ---------- */
@@ -9132,17 +9150,23 @@ window.smbStartAdmin = function () {
     if (/\{code\}/.test(S.camp.subject + S.camp.text) && !S.camp.code) return toast('Indiquez le code promo à citer (ou retirez {code} du message).');
     if (!confirm(`Envoyer cet e-mail à ${list.length} personne(s) ?${list.length > 290 ? '\n\n⚠️ Plus de 300 e-mails : l\'offre gratuite Brevo risque de bloquer une partie des envois aujourd\'hui.' : ''}`)) return;
     let sent = 0, skipped = 0, failed = 0, err = '';
+    const box = $('#camp-result') || (() => { const d = document.createElement('div'); d.id = 'camp-result'; d.className = 'adm-alert'; d.setAttribute('role', 'status'); btn.insertAdjacentElement('afterend', d); return d; })();
+    box.hidden = true;
     for (let i = 0; i < list.length; i += 50) {
       busy(btn, true, `⏳ Envoi… ${Math.min(i + 50, list.length)}/${list.length}`);
       const batch = list.slice(i, i + 50).map((c) => ({ to: c.email, name: c.nom, subject: fillMsg(S.camp.subject, { ...c, code: S.camp.code }), text: fillMsg(S.camp.text, { ...c, code: S.camp.code }) }));
       const r = await sendEmails(batch, { marketing: true });
-      if (!r.results) { failed += batch.length; err = r.message || ''; break; }
-      r.results.forEach((x) => (x.ok ? sent++ : x.error === 'UNSUBSCRIBED' ? skipped++ : failed++));
+      if (!r.results) { failed += batch.length; err = r.code ? mailErrorText(r.code, r.message) : (r.message || ''); break; }
+      r.results.forEach((x) => { if (x.ok) sent++; else if (x.error === 'UNSUBSCRIBED') skipped++; else { failed++; if (!err) err = mailErrorText(x.error, x.detail); } });
     }
     busy(btn, false);
     try { await fb.addCampaign({ audience: S.camp.audience, template: S.camp.tpl, subject: S.camp.subject.slice(0, 150), sent, skipped, failed }); } catch (e) {}
-    toast(`${sent} e-mail(s) envoyé(s)${skipped ? ' · ' + skipped + ' désinscrite(s) ignorée(s)' : ''}${failed ? ' · ' + failed + ' échec(s) ' + err : ''}`);
-    renderCampaigns();
+    const summary = `${sent} e-mail(s) envoyé(s)${skipped ? ' · ' + skipped + ' désinscrite(s) ignorée(s)' : ''}${failed ? ' · ' + failed + ' échec(s)' : ''}`;
+    toast(summary);
+    await renderCampaigns();
+    const res = $('#camp-result') || (() => { const d = document.createElement('div'); d.id = 'camp-result'; d.className = 'adm-alert'; d.setAttribute('role', 'status'); const b = $('[data-act="camp-send"]'); if (b) b.insertAdjacentElement('afterend', d); return d; })();
+    res.hidden = false;
+    res.innerHTML = `<b>${esc(summary)}</b>${err ? '<br>Cause : ' + esc(err) : ''}`;
   };
   ACT['camp-wa'] = () => {
     campRead();

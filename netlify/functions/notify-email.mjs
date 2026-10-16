@@ -17,9 +17,13 @@ export default async (req) => {
 
   // 1. Vérifier que c'est bien l'administration
   const token = String(req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
-  let uid;
+  let uid, firestore;
+  try { firestore = db(); }
+  catch (e) {
+    console.error('[notify] Firebase', e.message);
+    return json(503, { ok: false, code: 'FIREBASE_NOT_CONFIGURED', message: 'Identifiants Firebase manquants ou invalides dans Netlify (FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY, FIREBASE_PROJECT_ID).' });
+  }
   try {
-    const firestore = db();
     const decoded = await getAuth().verifyIdToken(token);
     uid = decoded.uid;
     const adm = await firestore.doc(`admins/${uid}`).get();
