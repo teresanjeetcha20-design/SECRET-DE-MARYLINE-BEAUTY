@@ -1,0 +1,18 @@
+# Le site public est dans /public : le code serveur (netlify/, scripts/, test/) n'est jamais publié.
+[build]
+  publish = "public"
+  # Régénère la liste des prix lue par le serveur à partir de public/index.html,
+  # puis lance les tests : le déploiement échoue si un test échoue.
+  command = "npm run catalog && npm test"
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+  external_node_modules = ["firebase-admin"]
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=(), payment=(self \"https://js.stripe.com\" \"https://www.paypal.com\")"

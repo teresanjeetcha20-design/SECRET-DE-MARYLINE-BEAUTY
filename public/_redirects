@@ -1,0 +1,14 @@
+# Anciennes adresses → nouvelle navigation interne
+/boutique.html  /?p=boutique  301
+/produit.html  /?p=produit  301
+/routine.html  /?p=routine  301
+/professionnels.html  /?p=professionnels  301
+/a-propos.html  /?p=a-propos  301
+/faq.html  /?p=faq  301
+/contact.html  /?p=contact  301
+/suivi.html  /?p=suivi  301
+/compte.html  /?p=compte  301
+/cgv.html  /?p=cgv  301
+/mentions-legales.html  /?p=mentions-legales  301
+/confidentialite.html  /?p=confidentialite  301
+/admin.html  /?p=admin  301

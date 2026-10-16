@@ -1,0 +1,15 @@
+{
+  "name": "smb-site",
+  "private": true,
+  "type": "module",
+  "description": "Secret de Maryline Beauty — site + paiements en ligne (Stripe, PayPal, Mobile Money PawaPay, virement) via Netlify Functions",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "catalog": "node scripts/extract-catalog.mjs",
+    "test": "node --test test/*.test.mjs",
+    "dev": "netlify dev"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.7.0"
+  }
+}

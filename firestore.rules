@@ -1,0 +1,162 @@
+rules_version = '2';
+// ============================================================================
+// SMB — Règles de sécurité Firestore
+// À copier dans : Console Firebase > Firestore Database > Règles > Publier
+// Principe : lecture publique uniquement de ce que le site affiche ;
+// tout le reste est réservé à l'admin (UID présent dans la collection « admins »)
+// ou à la cliente propriétaire de ses données.
+// ============================================================================
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function isAdmin() { return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)); }
+    function myEmail() { return signedIn() && request.auth.token.email != null ? request.auth.token.email.lower() : ''; }
+    function str(v, max) { return v is string && v.size() <= max; }
+    function onlyKeys(keys) { return request.resource.data.keys().hasOnly(keys); }
+    function changedOnly(keys) { return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys); }
+
+    // ---------- Administrateurs (créés à la main dans la console, jamais par le site)
+    match /admins/{uid} {
+      allow get: if signedIn() && request.auth.uid == uid;
+      allow list, write: if false;
+    }
+
+    // ---------- Profils clientes (aucun mot de passe n'y est stocké)
+    match /users/{uid} {
+      allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
+      allow create: if signedIn() && request.auth.uid == uid
+        && onlyKeys(['name','email','phone','adresse','type','societe','createdAt','createdTs','updatedTs'])
+        && str(request.resource.data.name, 60) && request.resource.data.email == myEmail()
+        && request.resource.data.get('type','particulier') in ['particulier','professionnel']
+        && str(request.resource.data.get('societe',''), 100);
+      allow update: if isAdmin() || (signedIn() && request.auth.uid == uid
+        && changedOnly(['name','phone','adresse','societe','email','updatedTs'])
+        && request.resource.data.email == myEmail()
+        && str(request.resource.data.get('name',''), 60) && str(request.resource.data.get('phone',''), 30)
+        && str(request.resource.data.get('adresse',''), 200) && str(request.resource.data.get('societe',''), 100));
+      allow delete: if isAdmin();
+    }
+
+    // ---------- Newsletter : inscription publique, pas de réécriture, lecture admin
+    match /newsletter/{id} {
+      allow create: if onlyKeys(['contact','type','source','date','heure','addedAt'])
+        && str(request.resource.data.contact, 120) && request.resource.data.type in ['email','telephone']
+        && str(request.resource.data.source, 20);
+      allow read, update, delete: if isAdmin();
+    }
+
+    // ---------- Commandes : création publique (commande sans compte possible),
+    // lecture par l'admin ou par la cliente concernée
+    match /orders/{id} {
+      allow create: if request.resource.data.id == id
+        && str(request.resource.data.nom, 120) && str(request.resource.data.tel, 40)
+        && request.resource.data.status == 'En attente'
+        && request.resource.data.amount is number && request.resource.data.amount >= 0
+        && request.resource.data.get('type','particulier') in ['particulier','professionnel']
+        && request.resource.data.get('paymentStatus','') in ['', 'en_attente_paiement', 'virement_attendu']
+        && !request.resource.data.keys().hasAny(['serverPriced','paidAt','stripeSessionId','amountPaid','providerTransactionId','doublePaymentAlert','markedPaidByAdmin','paymentId','paymentProvider','accessTokenHash','paymentAmount','paymentOperator'])
+        && (request.resource.data.uid == null || (signedIn() && request.resource.data.uid == request.auth.uid));
+      allow read: if isAdmin() || (signedIn() && (
+        resource.data.uid == request.auth.uid || (myEmail() != '' && resource.data.email == myEmail())));
+      allow update, delete: if isAdmin();
+    }
+    // Suivi public (sans données personnelles) : lecture d'une commande par son numéro uniquement
+    match /order_tracking/{id} {
+      allow get: if true;
+      allow create: if request.resource.data.id == id && request.resource.data.status == 'En attente';
+      allow list, update, delete: if isAdmin();
+    }
+
+    // ---------- Codes promo : vérification code par code, liste réservée à l'admin
+    match /promo_codes/{code} {
+      allow get: if true;
+      allow list, create, delete: if isAdmin();
+      allow update: if isAdmin() || (changedOnly(['usedCount'])
+        && request.resource.data.usedCount == resource.data.usedCount + 1);
+    }
+
+    // ---------- Catalogue, stock, configuration, contenu : lecture publique, écriture admin
+    match /custom_products/{id}  { allow read: if true; allow write: if isAdmin(); }
+    match /product_photos/{id}   { allow read: if true; allow write: if isAdmin(); }
+    match /product_status/{id}   { allow read: if true; allow write: if isAdmin(); }
+    match /stock/{id}            { allow read: if true; allow write: if isAdmin(); }
+    match /config/{id}           { allow read: if true; allow write: if isAdmin(); }
+    match /site_content/{id}     { allow read: if true; allow write: if isAdmin(); }
+    match /site_images/{id}      { allow read: if true; allow write: if isAdmin(); }
+
+    // ---------- Visites : chacun peut ajouter +1, seul l'admin lit le détail et remet à zéro
+    match /stats/{id} {
+      allow get: if isAdmin();
+      allow create: if request.resource.data.keys().hasOnly(['count']) && request.resource.data.count == 1;
+      allow update: if isAdmin() || (request.resource.data.keys().hasOnly(['count'])
+        && request.resource.data.count == resource.data.count + 1);
+      allow list, delete: if isAdmin();
+    }
+    match /stats_daily/{day} {
+      allow read, delete: if isAdmin();
+      allow create: if request.resource.data.keys().hasOnly(['count']) && request.resource.data.count == 1;
+      allow update: if request.resource.data.keys().hasOnly(['count']) && request.resource.data.count == resource.data.count + 1;
+    }
+
+    // ---------- Messagerie : la cliente (par son e-mail de connexion) et l'admin
+    match /chats/{email} {
+      allow read: if isAdmin() || myEmail() == email;
+      allow create, update: if isAdmin() || (myEmail() == email
+        && request.resource.data.keys().hasOnly(['name','email','lastText','lastFrom','lastTs','unread'])
+        && request.resource.data.get('lastFrom','client') == 'client');
+      allow delete: if isAdmin();
+
+      match /messages/{msgId} {
+        allow read: if isAdmin() || myEmail() == email;
+        allow create: if str(request.resource.data.text, 2000) && (
+          (isAdmin() && request.resource.data.from == 'admin') ||
+          (myEmail() == email && request.resource.data.from == 'client'));
+        allow update, delete: if isAdmin();
+      }
+    }
+
+    // ---------- Avis : lecture publique, dépôt public contrôlé, suppression admin
+    match /reviews/{id} {
+      allow read: if true;
+      allow create: if request.resource.data.id == id
+        && onlyKeys(['id','name','skin','rating','text','date','timestamp','createdAt'])
+        && str(request.resource.data.name, 40) && request.resource.data.name.size() > 0
+        && str(request.resource.data.text, 1000) && request.resource.data.text.size() >= 20
+        && request.resource.data.rating is int && request.resource.data.rating >= 1 && request.resource.data.rating <= 5;
+      allow update, delete: if isAdmin();
+    }
+
+    // ---------- Alertes « prévenez-moi quand c'est disponible »
+    match /notify_requests/{id} {
+      allow create: if onlyKeys(['productId','productName','channel','contact','date','ts'])
+        && request.resource.data.channel in ['email','whatsapp'] && str(request.resource.data.contact, 120);
+      allow read, update, delete: if isAdmin();
+    }
+
+    // ---------- Parcours clientes (uniquement si la visiteuse a accepté les cookies)
+    // Coordonnées présentes seulement si la cliente a accepté d'être recontactée (champ relance).
+    match /journeys/{vid} {
+      allow create, update: if vid.matches('v_[a-z0-9]{8,20}') && request.resource.data.vid == vid
+        && request.resource.data.keys().hasOnly(['vid','firstAt','lastAt','device','stage','ordered','orderId','events','cart','cartTotal','cartAt','nom','email','tel','relance'])
+        && request.resource.data.events is list && request.resource.data.events.size() <= 80
+        && request.resource.data.cart is list && request.resource.data.cart.size() <= 30
+        && (request.resource.data.relance == true || (request.resource.data.nom == '' && request.resource.data.email == '' && request.resource.data.tel == ''))
+        && str(request.resource.data.get('nom',''), 120) && str(request.resource.data.get('email',''), 120) && str(request.resource.data.get('tel',''), 40);
+      allow read, delete: if isAdmin();
+    }
+
+    // ---------- Campagnes (historique, admin uniquement)
+    match /campaigns/{id} { allow read, write: if isAdmin(); }
+
+    // ---------- Réservé au serveur de paiement (Firebase Admin SDK, qui ignore ces règles) :
+    // payments, checkout_keys, payment_events, unsubscribed → aucun accès depuis le navigateur.
+    match /payments/{id}       { allow read: if isAdmin(); allow write: if false; }
+    match /payment_events/{id} { allow read: if isAdmin(); allow write: if false; }
+    match /checkout_keys/{id}  { allow read, write: if false; }
+    match /unsubscribed/{id}   { allow read, write: if false; }
+
+    // Tout le reste est fermé
+    match /{document=**} { allow read, write: if false; }
+  }
+}
